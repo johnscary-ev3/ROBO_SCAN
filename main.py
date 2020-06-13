@@ -35,7 +35,7 @@ import sound_tools
 
 
 #Print Rev
-print("ROBO_SCAN EV3 micro-python-R2 No Threads JS 6/10/2020")
+print("ROBO_SCAN EV3 micro-python-R2 No Threads JS 6/12/2020")
 
 #Print Flags
 GeneralLoopPrint = False
@@ -55,7 +55,6 @@ InfraredSensorPortAvailable_1 = True
 InfraredSensorPortAvailable_2 = False
 UltrasonicPresent =True
 UltrasonicPresent_2 =False
-GyroAvailable = False
 OpticalSensorAvailable = True
 OpticalSensorAvailable_2 = True
 ScanHeadPresent = True
@@ -98,14 +97,12 @@ target_angle = [ 45,  0, -45, -90, -135, -180, -225, -270]
 target_direc = [  1,  0,   7,   6,    5,    4,    3,    2]
 num_head_poistions =8
 
-
 #variables used later
 buttons=[]
 
 # Play a sound.
 #brick.sound.beep()
 brick.speaker.beep(500, 100)
-
 
  # Turn the light green
 brick.light.on(Color.GREEN)
@@ -114,13 +111,23 @@ brick.light.on(Color.GREEN)
 #brick.display.image(ImageFile.EV3)
 brick.screen.load_image(ImageFile.EV3)
 
+# Initialize IR sensors
+if InfraredSensorPortAvailable_1:
+    ir =InfraredSensor(InfraredSensorPort)
+if InfraredSensorPortAvailable_2:
+    ir_2= InfraredSensor(InfraredSensorPort_2)
 
 #Init the Ultrasonic Distance sensors
-if UseSonicObjectDetect:
-    if UltrasonicPresent:
-        object_tools.Init_UltrasonicSensor()
-    if UltrasonicPresent_2:
-        object_tools.Init_UltrasonicSensor_2()
+if UltrasonicPresent:
+    object_tools.Init_UltrasonicSensor()
+if UltrasonicPresent_2:
+    object_tools.Init_UltrasonicSensor_2()
+
+#Init Optical Sensors 
+if OpticalSensorAvailable:   
+    color_tools.optical_sensor_init()
+if OpticalSensorAvailable_2:   
+    color_tools.optical_sensor_init_2()
 
 #Init Small Motors if present
 if ScanHeadPresent :
@@ -130,9 +137,11 @@ if ScanHeadPresent_2 :
 
 #set up some motor speeds
 head_speed = 300
+motion_tools.scan_head_speed = head_speed
 
 
 # Init the Scan Head
+ScanHeadInitialized= False
 if UseScanHeadObjectDetect:
     if ScanHeadPresent:
         motion_tools.init_scan_head(head_speed, ScanHeadHomeRight, ScanHeadHomeOffset)
@@ -154,17 +163,12 @@ if UseScanHeadObjectDetect:
             wait(250)
         #Reset head to 0 position
         motion_tools.move_scan_head_target_2(head_speed, 0)
+    #set Init flag
+    ScanHeadInitialized= True
 
 # Play another beep sound.
 # This time with a higher pitch (1000 Hz) and longer duration (500 ms).
 brick.speaker.beep(1000, 500)
-
-# Initialize IR sensors
-if InfraredSensorPortAvailable_1:
-    ir =InfraredSensor(InfraredSensorPort)
-if InfraredSensorPortAvailable_2:
-    ir_2= InfraredSensor(InfraredSensorPort_2)
-
 
 #Enable object detect 
 if UseSonicObjectDetect:
@@ -173,16 +177,12 @@ if UseSonicObjectDetect:
     if UltrasonicPresent_2:
         object_tools.object_detect_run_2 = True
 
-
 #Start Optical Sensors
 if UseOpticalSensors:
     if OpticalSensorAvailable:
         color_tools.optical_sensor_run= True
     if OpticalSensorAvailable_2:
         color_tools.optical_sensor_run_2 = True
-    #Init Optical Sensors    
-    color_tools.optical_sensor_init()
-
 
 #Enable Scan heads moves 
 if UseScanHeadObjectDetect:
@@ -190,8 +190,6 @@ if UseScanHeadObjectDetect:
         motion_tools.scan_head_move = True
     if ScanHeadPresent_2:
         motion_tools.scan_head_move_2 = True
-    if (ScanHeadPresent or ScanHeadPresent_2):
-        motion_tools.scan_head_speed = head_speed
      
 
 # Main loop 
@@ -275,6 +273,64 @@ while main_loop ==True:
     # Exit Button
     if (Button.BEACON in buttons):
         main_loop =False
+
+    #Toggle Optical Sensors ON/OFF
+    if Button.LEFT_UP in buttons:
+        if not UseOpticalSensors:
+            sound_tools.play_file(SoundFile.START)
+            sound_tools.play_file(SoundFile.COLOR)
+            UseOpticalSensors= True
+            if OpticalSensorAvailable:
+                color_tools.optical_sensor_run= True
+            if OpticalSensorAvailable_2:
+                color_tools.optical_sensor_run_2 = True
+        else:
+            UseOpticalSensors= False
+            sound_tools.play_file(SoundFile.STOP)
+            sound_tools.play_file(SoundFile.COLOR)
+            color_tools.optical_sensor_run= False
+            color_tools.optical_sensor_run_2 = False  
+
+    #Toggle Sonic Sensors ON/OFF
+    if Button.LEFT_DOWN in buttons:
+        if not UseSonicObjectDetect:
+            sound_tools.play_file(SoundFile.START)
+            sound_tools.play_file(SoundFile.OBJECT)
+            sound_tools.play_file(SoundFile.DETECTED)
+            UseSonicObjectDetect= True
+            if UltrasonicPresent:
+                object_tools.object_detect_run= True
+            if UltrasonicPresent_2:
+                object_tools.object_detect_run_2 = True
+        else:
+            UseSonicObjectDetect= False
+            sound_tools.play_file(SoundFile.STOP)
+            sound_tools.play_file(SoundFile.OBJECT)
+            sound_tools.play_file(SoundFile.DETECTED)
+            object_tools.object_detect_run= False
+            object_tools.object_detect_run_2 = False  
+
+    #Toggle Searching Motors ON/OFF
+    if Button.RIGHT_UP in buttons:
+        if ScanHeadInitialized:
+            if not UseScanHeadObjectDetect:
+                sound_tools.play_file(SoundFile.START)
+                sound_tools.play_file(SoundFile.SEARCHING)
+                UseScanHeadObjectDetect= True
+                if ScanHeadPresent:
+                    motion_tools.scan_head_move = True
+                if ScanHeadPresent_2:
+                    motion_tools.scan_head_move_2 = True
+            else:
+                UseScanHeadObjectDetect= False
+                sound_tools.play_file(SoundFile.STOP)
+                sound_tools.play_file(SoundFile.SEARCHING)
+                motion_tools.scan_head_move = False
+                motion_tools.scan_head_move_2 = False
+        else:
+            sound_tools.play_file(SoundFile.SORRY)
+            sound_tools.play_file(SoundFile.NO)
+            sound_tools.play_file(SoundFile.SEARCHING)
 
     # Check for button press on Chan 2 
     chan = 2  

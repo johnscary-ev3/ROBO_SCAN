@@ -19,7 +19,6 @@ import object_tools
 ColorSensorPort = Port.S3
 ColorSensorPort_2 = Port.S1
 
-color_detect_loop = True
 color_detect_loop_fast_flag = False
 color_sound_on   = False
 color_sound_on_2 = False
@@ -31,22 +30,18 @@ color_rgb_int   = [0,0,0]
 color_rgb_int_2 = [0,0,0]
 color_rgb_int_ave   = 0
 color_rgb_int_ave_2 = 0
-optical_sensor_run = True
+optical_sensor_run = False
 optical_sensor_run_2 = False
 cs_error = False
 cs_error_2 = False
 
 def optical_sensor_init():
-    global optical_sensor_run 
-    global optical_sensor_run_2 
     global cs
-    global cs_2
-    if optical_sensor_run:
-        cs = ColorSensor(ColorSensorPort)
-    if optical_sensor_run_2:
-        cs_2 = ColorSensor(ColorSensorPort_2)
+    cs = ColorSensor(ColorSensorPort)
 
-
+def optical_sensor_init_2():
+    global cs_2   
+    cs_2 = ColorSensor(ColorSensorPort_2)
 
 #Do Optical Sensor reads
 def optical_sensor_detect():
